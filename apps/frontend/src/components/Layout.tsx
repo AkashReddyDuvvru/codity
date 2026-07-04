@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Briefcase, Server, Settings, PieChart } from 'lucide-react';
 
