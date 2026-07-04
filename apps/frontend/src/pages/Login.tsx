@@ -8,18 +8,20 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
+      const { data } = await api.post(endpoint, { email, password });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Authentication failed');
     }
   };
 
@@ -34,7 +36,7 @@ export default function Login() {
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Manage your distributed jobs with ease</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form className="mt-8 space-y-6" onSubmit={handleAuth}>
           {error && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
               {error}
@@ -69,8 +71,18 @@ export default function Login() {
             type="submit"
             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-500)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand-500)] focus:ring-offset-[var(--color-bg-surface)] transition duration-200"
           >
-            Sign In
+            {isLogin ? 'Sign In' : 'Sign Up'}
           </button>
+          
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              className="text-sm text-[var(--color-brand-500)] hover:text-white transition"
+            >
+              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
