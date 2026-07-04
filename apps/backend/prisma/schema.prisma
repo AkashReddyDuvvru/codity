@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum JobStatus {
+  QUEUED
+  SCHEDULED
+  CLAIMED
+  RUNNING
+  COMPLETED
+  FAILED
+  RETRY
+  DEAD_LETTER
+}
+
+model User {
+  id             String             @id @default(uuid())
+  email          String             @unique
+  passwordHash   String
+  role           Role               @default(USER)
+  organizations  OrganizationUser[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Organization {
+  id        String             @id @default(uuid())
+  name      String
+  users     OrganizationUser[]
+  projects  Project[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+model OrganizationUser {
+  userId         String
+  organizationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+}
+
+model Project {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  queues         Queue[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Queue {
+  id               String       @id @default(uuid())
+  projectId        String
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name             String
+  priority         Int          @default(0)
+  concurrencyLimit Int          @default(10)
+  isPaused         Boolean      @default(false)
+  jobs             Job[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Job {
+  id             String       @id @default(uuid())
+  queueId        String
+  queue          Queue        @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  status         JobStatus    @default(QUEUED)
+  payload        Json
+  priority       Int          @default(0)
+  
+  // Scheduling
+  runAt          DateTime     @default(now())
+  
+  // Tracking
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  duration       Int?         // In milliseconds
+  
+  // Retries
+  retryCount     Int          @default(0)
+  maxRetries     Int          @default(3)
+  retryPolicy    RetryPolicy? @relation(fields: [retryPolicyId], references: [id])
+  retryPolicyId  String?
+  
+  // Relations
+  executions     JobExecution[]
+  logs           JobLog[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, runAt])
+}
+
+model RetryPolicy {
+  id          String   @id @default(uuid())
+  type        String   // FIXED, LINEAR, EXPONENTIAL
+  delayBase   Int      // Base delay in ms
+  jobs        Job[]
+}
+
+model JobExecution {
+  id          String   @id @default(uuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  workerId    String?
+  worker      Worker?  @relation(fields: [workerId], references: [id])
+  status      JobStatus
+  error       String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+}
+
+model JobLog {
+  id          String   @id @default(uuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  level       String
+  message     String
+  timestamp   DateTime @default(now())
+}
+
+model Worker {
+  id             String   @id @default(uuid())
+  name           String
+  status         String   // ACTIVE, INACTIVE
+  lastHeartbeat  DateTime @default(now())
+  executions     JobExecution[]
+  heartbeats     WorkerHeartbeat[]
+}
+
+model WorkerHeartbeat {
+  id          String   @id @default(uuid())
+  workerId    String
+  worker      Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  metrics     Json?
+  timestamp   DateTime @default(now())
+}

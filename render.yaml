@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: codity-backend
+    env: node
+    buildCommand: npm install && npm run build --workspace=apps/backend
+    startCommand: npm run start --workspace=apps/backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false

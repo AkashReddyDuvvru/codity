@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: codity_db
+    restart: always
+    environment:
+      POSTGRES_USER: codity_user
+      POSTGRES_PASSWORD: codity_password
+      POSTGRES_DB: codity_scheduler
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
